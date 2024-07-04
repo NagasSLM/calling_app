@@ -1,6 +1,14 @@
 package com.nickagas.calling_app
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.telecom.PhoneAccount
+import android.telecom.PhoneAccountHandle
+import android.telecom.TelecomManager
+import android.util.Log
 import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.findNavController
@@ -9,6 +17,8 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import android.view.Menu
 import android.view.MenuItem
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.nickagas.calling_app.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -29,8 +39,9 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
 
         binding.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show()
+            Log.i("nagas makeTelecomCall","init ")
+            makeTelecomCall()
+
         }
     }
 
@@ -54,5 +65,43 @@ class MainActivity : AppCompatActivity() {
         val navController = findNavController(R.id.nav_host_fragment_content_main)
         return navController.navigateUp(appBarConfiguration)
                 || super.onSupportNavigateUp()
+    }
+    fun makeTelecomCall() {
+
+        if (ContextCompat.checkSelfPermission(
+                applicationContext,
+                android.Manifest.permission.CALL_PHONE
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            // Permission is granted, you can proceed with making phone calls
+
+            val phoneAccountHandle = PhoneAccountHandle(
+                ComponentName(applicationContext, MyConnectionService::class.java),
+                "UniqueIdentifier"
+            )
+            val phoneAccount = PhoneAccount.Builder(phoneAccountHandle, "YourAppLabel")
+                .setCapabilities(PhoneAccount.CAPABILITY_CONNECTION_MANAGER)//CAPABILITY_CONNECTION_MANAGER CAPABILITY_SELF_MANAGED
+                .build()
+            val telecomManager = applicationContext.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+            telecomManager.registerPhoneAccount(phoneAccount)
+
+
+            val uri = Uri.fromParts(PhoneAccount.SCHEME_TEL, "xxxxxxx", null)
+            val bundle = Bundle()
+            bundle.putParcelable(
+                TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE,
+                phoneAccountHandle
+            )
+            telecomManager.placeCall(uri, bundle)
+        } else {
+            // Permission is not granted, request the permission from the user
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.CALL_PHONE),
+                123456
+            )
+
+        }
+
     }
 }
