@@ -1,63 +1,55 @@
 package com.nickagas.calling_app
 
-import android.net.Uri
+
 import android.telecom.Connection
 import android.telecom.ConnectionRequest
 import android.telecom.ConnectionService
-import android.telecom.PhoneAccount.CAPABILITY_SELF_MANAGED
+import android.telecom.DisconnectCause
 import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
+import android.net.Uri
 import android.util.Log
 
 class MyConnectionService : ConnectionService() {
-    override fun onCreateOutgoingConnection(
-        phoneAccountHandle: PhoneAccountHandle?,
-        connectionRequest: ConnectionRequest?
-    ): Connection? {
-        // Handle outgoing call creation
-        Log.i("nagas onCreateOutgoingConnection","init ")
-        return YourConnection(phoneAccountHandle, connectionRequest?.address)
-    }
-
-    override fun onCreateOutgoingConnectionFailed(
-        phoneAccountHandle: PhoneAccountHandle?,
-        connectionRequest: ConnectionRequest?
-    ) {
-        // Handle outgoing call creation failure
-        Log.i("nagas onCreateOutgoingConnectionFailed","init ")
-    }
 
     override fun onCreateIncomingConnection(
-        phoneAccountHandle: PhoneAccountHandle?,
-        connectionRequest: ConnectionRequest?
-    ): Connection? {
-        // Handle incoming call creation
-        Log.i("nagas onCreateIncomingConnection","init ")
-        return YourConnection(phoneAccountHandle, connectionRequest?.address)
+        connectionManagerPhoneAccount: PhoneAccountHandle?,
+        request: ConnectionRequest?
+    ): Connection {
+        Log.d("nagas","MyConnectionService onCreateIncomingConnection")
+        val connection = MyConnection()
+        connection.setAddress(request?.address, TelecomManager.PRESENTATION_ALLOWED)
+        connection.setRinging()
+        return connection
+    }
+
+
+    override fun onCreateOutgoingConnection(
+        connectionManagerPhoneAccount: PhoneAccountHandle?,
+        request: ConnectionRequest?
+    ): Connection {
+        Log.d("nagas","MyConnectionService onCreateOutgoingConnection")
+        val connection = MyConnection()
+        connection.setAddress(request?.address, TelecomManager.PRESENTATION_ALLOWED)
+        connection.setDialing()
+        connection.setInitialized()
+        // Simulate a delay before the call is connected
+//        connection.postDelayed({ connection.setActive() }, 3000)
+        return connection
     }
 
     override fun onCreateIncomingConnectionFailed(
-        phoneAccountHandle: PhoneAccountHandle?,
-        connectionRequest: ConnectionRequest?
+        connectionManagerPhoneAccount: PhoneAccountHandle?,
+        request: ConnectionRequest?
     ) {
-        // Handle incoming call creation failure
-        Log.i("OUTGOINGCALLFAILED","d")
+        Log.d("nagas","MyConnectionService onCreateIncomingConnectionFailed")
+        super.onCreateIncomingConnectionFailed(connectionManagerPhoneAccount, request)
     }
-}
-
-class YourConnection(
-    phoneAccountHandle: PhoneAccountHandle?,
-    address: Uri?
-) : Connection() {
-    init {
-        setAddress(address, TelecomManager.PRESENTATION_ALLOWED)
-        setConnectionCapabilities(CAPABILITY_SELF_MANAGED)
-//        setAudioModeIsVoip(true)
-        Log.i("nagas YourConnection","init ")
-    }
-
-    override fun onStateChanged(state: Int) {
-        // Handle state changes of the call
-        Log.i("nagas YourConnection","onStateChanged "+state.toString())
+    override fun onCreateOutgoingConnectionFailed(
+        connectionManagerPhoneAccount: PhoneAccountHandle?,
+        request: ConnectionRequest?
+    ) {
+        Log.d("nagas","MyConnectionService onCreateOutgoingConnectionFailed")
+        super.onCreateOutgoingConnectionFailed(connectionManagerPhoneAccount, request)
     }
 }

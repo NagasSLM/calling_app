@@ -20,8 +20,11 @@ import android.view.MenuItem
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.nickagas.calling_app.databinding.ActivityMainBinding
+import android.Manifest
+import android.widget.Toast
 
 class MainActivity : AppCompatActivity() {
+    private val REQUEST_PERMISSIONS = 1
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
@@ -39,8 +42,11 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
 
         binding.fab.setOnClickListener { view ->
-            Log.i("nagas makeTelecomCall","init ")
-            makeTelecomCall()
+            Log.i("nagas","init makeTelecomCall")
+            if (checkPermissions()) {
+                makeTelecomCall()
+            }
+
 
         }
     }
@@ -74,25 +80,21 @@ class MainActivity : AppCompatActivity() {
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             // Permission is granted, you can proceed with making phone calls
-
-            val phoneAccountHandle = PhoneAccountHandle(
-                ComponentName(applicationContext, MyConnectionService::class.java),
-                "UniqueIdentifier"
-            )
-            val phoneAccount = PhoneAccount.Builder(phoneAccountHandle, "YourAppLabel")
-                .setCapabilities(PhoneAccount.CAPABILITY_CONNECTION_MANAGER)//CAPABILITY_CONNECTION_MANAGER CAPABILITY_SELF_MANAGED
+            Log.d("nagas","makeTelecomCall PERMISSION_GRANTED")
+            val telecomManager = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+            val phoneAccountHandle = PhoneAccountHandle(ComponentName(this, MyConnectionService::class.java), "myConnectionService")
+            val phoneAccount = PhoneAccount.builder(phoneAccountHandle, "MyPhoneAccount")
+                .setCapabilities(PhoneAccount.CAPABILITY_CALL_PROVIDER)
                 .build()
-            val telecomManager = applicationContext.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+
             telecomManager.registerPhoneAccount(phoneAccount)
-
-
-            val uri = Uri.fromParts(PhoneAccount.SCHEME_TEL, "xxxxxxx", null)
+            val uri = Uri.fromParts("tel:", "6977368455", null)
             val bundle = Bundle()
-            bundle.putParcelable(
-                TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE,
-                phoneAccountHandle
-            )
+//            bun
             telecomManager.placeCall(uri, bundle)
+
+
+
         } else {
             // Permission is not granted, request the permission from the user
             ActivityCompat.requestPermissions(
@@ -104,4 +106,39 @@ class MainActivity : AppCompatActivity() {
         }
 
     }
+    private fun checkPermissions(): Boolean {
+        val callPhonePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
+        val manageOwnCallsPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.MANAGE_OWN_CALLS)
+        val readPhoneStatePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+
+        val permissionsNeeded = mutableListOf<String>()
+        if (callPhonePermission != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.CALL_PHONE)
+        }
+        if (manageOwnCallsPermission != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.MANAGE_OWN_CALLS)
+        }
+        if (readPhoneStatePermission != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.READ_PHONE_STATE)
+        }
+
+        return if (permissionsNeeded.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, permissionsNeeded.toTypedArray(), REQUEST_PERMISSIONS)
+            false
+        } else {
+            true
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_PERMISSIONS) {
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                makeTelecomCall()
+            } else {
+                Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
 }
